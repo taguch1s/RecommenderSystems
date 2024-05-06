@@ -12,7 +12,7 @@ class PopularityRecommender(BaseRecommender):
         minimum_num_rating = kwargs.get("minimum_num_rating", 200)
 
         # 各アイテムごとの平均の評価値を計算し、その平均評価値を予測値として利用する
-        movie_rating_average = dataset.train.groupby("movie_id").agg({"rating": np.mean})
+        movie_rating_average = dataset.train.groupby("movie_id").agg({"rating": "mean"})
         # テストデータに予測値を格納する。テストデータのみに存在するアイテムの予測評価値は０とする
         movie_rating_predict = dataset.test.merge(
             movie_rating_average, on="movie_id", how="left", suffixes=("_test", "_pred")
@@ -21,11 +21,19 @@ class PopularityRecommender(BaseRecommender):
         # 各ユーザに対するおすすめ映画は、そのユーザがまだ評価していない映画の中から評価値が高いもの10作品とする
         # ただし、評価件数が少ないとノイズが大きいため、minimum_num_rating件以上評価がある映画に絞る
         pred_user2items = defaultdict(list)
-        user_watched_movies = dataset.train.groupby("user_id").agg({"movie_id": list})["movie_id"].to_dict()
-        movie_stats = dataset.train.groupby("movie_id").agg({"rating": [np.size, np.mean]})
+        user_watched_movies = (
+            dataset.train.groupby("user_id")
+            .agg({"movie_id": list})["movie_id"]
+            .to_dict()
+        )
+        movie_stats = dataset.train.groupby("movie_id").agg(
+            {"rating": ["size", "mean"]}
+        )
         atleast_flg = movie_stats["rating"]["size"] >= minimum_num_rating
         movies_sorted_by_rating = (
-            movie_stats[atleast_flg].sort_values(by=("rating", "mean"), ascending=False).index.tolist()
+            movie_stats[atleast_flg]
+            .sort_values(by=("rating", "mean"), ascending=False)
+            .index.tolist()
         )
 
         for user_id in dataset.train.user_id.unique():

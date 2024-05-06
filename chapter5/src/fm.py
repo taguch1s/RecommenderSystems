@@ -28,7 +28,9 @@ class FMRecommender(BaseRecommender):
 
         # ユーザーが評価した映画
         user_evaluated_movies = (
-            filtered_movielens_train.groupby("user_id").agg({"movie_id": list})["movie_id"].to_dict()
+            filtered_movielens_train.groupby("user_id")
+            .agg({"movie_id": list})["movie_id"]
+            .to_dict()
         )
 
         train_data_for_fm = []
@@ -46,7 +48,9 @@ class FMRecommender(BaseRecommender):
         vectorizer = DictVectorizer()
         X = vectorizer.fit_transform(train_data_for_fm).toarray()
 
-        fm_model = xl.FMModel(task="reg", metric="rmse", lr=lr, opt="sgd", k=factors, epoch=n_epochs)
+        fm_model = xl.FMModel(
+            task="reg", metric="rmse", lr=lr, opt="sgd", k=factors, epoch=n_epochs
+        )
 
         # Start to train
         fm_model.fit(X, y, is_lock_free=False)
@@ -61,9 +65,13 @@ class FMRecommender(BaseRecommender):
             for movie_id in unique_movie_ids:
                 x = {"user_id": str(user_id), "movie_id": str(movie_id)}
                 if use_side_information:
-                    tag = dataset.item_content[dataset.item_content.movie_id == movie_id].tag.tolist()[0]
+                    tag = dataset.item_content[
+                        dataset.item_content.movie_id == movie_id
+                    ].tag.tolist()[0]
                     x["tag"] = tag
-                    x["user_rating_avg"] = np.mean(user_evaluated_movies[row["user_id"]])
+                    x["user_rating_avg"] = np.mean(
+                        user_evaluated_movies[row["user_id"]]
+                    )
                 test_data_for_fm.append(x)
 
         X_test = vectorizer.transform(test_data_for_fm).toarray()

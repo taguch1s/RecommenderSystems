@@ -35,7 +35,9 @@ class MFRecommender(BaseRecommender):
 
         # Surpriseで行列分解を学習
         # SVDという名前だが、特異値分解ではなく、Matrix Factorizationが実行される
-        matrix_factorization = SVD(n_factors=factors, n_epochs=n_epochs, lr_all=lr_all, biased=use_biase)
+        matrix_factorization = SVD(
+            n_factors=factors, n_epochs=n_epochs, lr_all=lr_all, biased=use_biase
+        )
         matrix_factorization.fit(data_train)
 
         def get_top_n(predictions, n=10):
@@ -57,12 +59,19 @@ class MFRecommender(BaseRecommender):
         pred_user2items = get_top_n(predictions, n=10)
 
         test_data = pd.DataFrame.from_dict(
-            [{"user_id": p.uid, "movie_id": p.iid, "rating_pred": p.est} for p in predictions]
+            [
+                {"user_id": p.uid, "movie_id": p.iid, "rating_pred": p.est}
+                for p in predictions
+            ]
         )
-        movie_rating_predict = dataset.test.merge(test_data, on=["user_id", "movie_id"], how="left")
+        movie_rating_predict = dataset.test.merge(
+            test_data, on=["user_id", "movie_id"], how="left"
+        )
 
         # 予測ができない箇所には、平均値を格納する
-        movie_rating_predict.rating_pred.fillna(filtered_movielens_train.rating.mean(), inplace=True)
+        movie_rating_predict["rating_pred"] = movie_rating_predict[
+            "rating_pred"
+        ].fillna(filtered_movielens_train.rating.mean())
 
         return RecommendResult(movie_rating_predict.rating_pred, pred_user2items)
 

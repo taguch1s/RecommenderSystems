@@ -15,7 +15,9 @@ class RandomRecommender(BaseRecommender):
         movie_id2index = dict(zip(unique_movie_ids, range(len(unique_movie_ids))))
 
         # ユーザー×アイテムの行列で、各セルの予測評価値は0.5〜5.0の一様乱数とする
-        pred_matrix = np.random.uniform(0.5, 5.0, (len(unique_user_ids), len(unique_movie_ids)))
+        pred_matrix = np.random.uniform(
+            0.5, 5.0, (len(unique_user_ids), len(unique_movie_ids))
+        )
 
         # rmse評価用に、テストデータに出てくるユーザーとアイテムの予測評価値を格納する
         movie_rating_predict = dataset.test.copy()
@@ -38,7 +40,11 @@ class RandomRecommender(BaseRecommender):
         # キーはユーザーIDで、バリューはおすすめのアイテムIDのリスト
         pred_user2items = defaultdict(list)
         # ユーザーがすでに評価した映画を取得する
-        user_evaluated_movies = dataset.train.groupby("user_id").agg({"movie_id": list})["movie_id"].to_dict()
+        user_evaluated_movies = (
+            dataset.train.groupby("user_id")
+            .agg({"movie_id": list})["movie_id"]
+            .to_dict()
+        )
         for user_id in unique_user_ids:
             user_index = user_id2index[user_id]
             movie_indexes = np.argsort(-pred_matrix[user_index, :])

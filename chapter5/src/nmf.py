@@ -14,9 +14,15 @@ class NMFRecommender(BaseRecommender):
         factors = kwargs.get("factors", 5)
 
         # 評価値をユーザー×映画の行列に変換。欠損値は、平均値または０で穴埋めする
-        user_movie_matrix = dataset.train.pivot(index="user_id", columns="movie_id", values="rating")
-        user_id2index = dict(zip(user_movie_matrix.index, range(len(user_movie_matrix.index))))
-        movie_id2index = dict(zip(user_movie_matrix.columns, range(len(user_movie_matrix.columns))))
+        user_movie_matrix = dataset.train.pivot(
+            index="user_id", columns="movie_id", values="rating"
+        )
+        user_id2index = dict(
+            zip(user_movie_matrix.index, range(len(user_movie_matrix.index)))
+        )
+        movie_id2index = dict(
+            zip(user_movie_matrix.columns, range(len(user_movie_matrix.columns)))
+        )
         if fillna_with_zero:
             matrix = user_movie_matrix.fillna(0).to_numpy()
         else:
@@ -47,7 +53,11 @@ class NMFRecommender(BaseRecommender):
 
         # 各ユーザに対するおすすめ映画は、そのユーザがまだ評価していない映画の中から予測値が高い順にする
         pred_user2items = defaultdict(list)
-        user_evaluated_movies = dataset.train.groupby("user_id").agg({"movie_id": list})["movie_id"].to_dict()
+        user_evaluated_movies = (
+            dataset.train.groupby("user_id")
+            .agg({"movie_id": list})["movie_id"]
+            .to_dict()
+        )
         for user_id in dataset.train.user_id.unique():
             if user_id not in user_id2index:
                 continue

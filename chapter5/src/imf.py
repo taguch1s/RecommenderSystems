@@ -24,7 +24,9 @@ class IMFRecommender(BaseRecommender):
         )
 
         # 行列分解用に行列を作成する
-        movielens_train_high_rating = filtered_movielens_train[dataset.train.rating >= 4]
+        movielens_train_high_rating = filtered_movielens_train[
+            dataset.train.rating >= 4
+        ]
 
         unique_user_ids = sorted(movielens_train_high_rating.user_id.unique())
         unique_movie_ids = sorted(movielens_train_high_rating.movie_id.unique())
@@ -39,7 +41,10 @@ class IMFRecommender(BaseRecommender):
 
         # モデルの初期化
         model = implicit.als.AlternatingLeastSquares(
-            factors=factors, iterations=n_epochs, calculate_training_loss=True, random_state=1
+            factors=factors,
+            iterations=n_epochs,
+            calculate_training_loss=True,
+            random_state=1,
         )
 
         # 学習

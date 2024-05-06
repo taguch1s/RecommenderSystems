@@ -10,31 +10,35 @@ np.random.seed(0)
 
 
 class UMCFRecommender(BaseRecommender):
+    # ピアソンの相関係数
+    def peason_coefficient(self, u: np.ndarray, v: np.ndarray) -> float:
+        u_diff = u - np.mean(u)
+        v_diff = v - np.mean(v)
+        numerator = np.dot(u_diff, v_diff)
+        denominator = np.sqrt(sum(u_diff**2)) * np.sqrt(sum(v_diff**2))
+        if denominator == 0:
+            return 0.0
+        return numerator / denominator
+
     def recommend(self, dataset: Dataset, **kwargs) -> RecommendResult:
-
-        # ピアソンの相関係数
-        def peason_coefficient(u: np.ndarray, v: np.ndarray) -> float:
-            u_diff = u - np.mean(u)
-            v_diff = v - np.mean(v)
-            numerator = np.dot(u_diff, v_diff)
-            denominator = np.sqrt(sum(u_diff ** 2)) * np.sqrt(sum(v_diff ** 2))
-            if denominator == 0:
-                return 0.0
-            return numerator / denominator
-
         is_naive = kwargs.get("is_naive", False)
 
         # 評価値をユーザー×映画の行列に変換
-        user_movie_matrix = dataset.train.pivot(index="user_id", columns="movie_id", values="rating")
-        user_id2index = dict(zip(user_movie_matrix.index, range(len(user_movie_matrix.index))))
-        movie_id2index = dict(zip(user_movie_matrix.columns, range(len(user_movie_matrix.columns))))
+        user_movie_matrix = dataset.train.pivot(
+            index="user_id", columns="movie_id", values="rating"
+        )
+        user_id2index = dict(
+            zip(user_movie_matrix.index, range(len(user_movie_matrix.index)))
+        )
+        movie_id2index = dict(
+            zip(user_movie_matrix.columns, range(len(user_movie_matrix.columns)))
+        )
 
         # 予測対象のユーザーと映画の組
         movie_rating_predict = dataset.test.copy()
         pred_user2items = defaultdict(list)
 
         if is_naive:
-
             # 予測対象のユーザーID
             test_users = movie_rating_predict.user_id.unique()
 
@@ -63,7 +67,7 @@ class UMCFRecommender(BaseRecommender):
                     u_1, u_2 = u_1[common_items], u_2[common_items]
 
                     # ピアソンの相関係数を使ってユーザー１とユーザー２の類似度を算出
-                    rho_12 = peason_coefficient(u_1, u_2)
+                    rho_12 = self.peason_coefficient(u_1, u_2)
 
                     # ユーザー1との類似度が0より大きい場合、ユーザー2を類似ユーザーとみなす
                     if rho_12 > 0:
@@ -75,14 +79,20 @@ class UMCFRecommender(BaseRecommender):
                 avg_1 = np.mean(user_movie_matrix.loc[user1_id, :].dropna().to_numpy())
 
                 # 予測対象の映画のID
-                test_movies = movie_rating_predict[movie_rating_predict["user_id"] == user1_id].movie_id.values
+                test_movies = movie_rating_predict[
+                    movie_rating_predict["user_id"] == user1_id
+                ].movie_id.values
                 # 予測できない映画への評価値はユーザー１の平均評価値とする
-                movie_rating_predict.loc[(movie_rating_predict["user_id"] == user1_id), "rating_pred"] = avg_1
+                movie_rating_predict.loc[
+                    (movie_rating_predict["user_id"] == user1_id), "rating_pred"
+                ] = avg_1
 
                 if similar_users:
                     for movie_id in test_movies:
                         if movie_id in movie_id2index:
-                            r_xy = user_movie_matrix.loc[similar_users, movie_id].to_numpy()
+                            r_xy = user_movie_matrix.loc[
+                                similar_users, movie_id
+                            ].to_numpy()
                             rating_exists = ~np.isnan(r_xy)
 
                             # 類似ユーザーが対象となる映画への評価値を持っていない場合はスキップ
@@ -92,7 +102,9 @@ class UMCFRecommender(BaseRecommender):
                             r_xy = r_xy[rating_exists]
                             rho_1x = np.array(similarities)[rating_exists]
                             avg_x = np.array(avgs)[rating_exists]
-                            r_hat_1y = avg_1 + np.dot(rho_1x, (r_xy - avg_x)) / rho_1x.sum()
+                            r_hat_1y = (
+                                avg_1 + np.dot(rho_1x, (r_xy - avg_x)) / rho_1x.sum()
+                            )
 
                             # 予測評価値を格納
                             movie_rating_predict.loc[
@@ -108,7 +120,10 @@ class UMCFRecommender(BaseRecommender):
                 dataset.train[["user_id", "movie_id", "rating"]], reader
             ).build_full_trainset()
 
-            sim_options = {"name": "pearson", "user_based": True}  # 類似度を計算する方法を指定する  # False にするとアイテムベースとなる
+            sim_options = {
+                "name": "pearson",
+                "user_based": True,
+            }  # 類似度を計算する方法を指定する  # False にするとアイテムベースとなる
             knn = KNNWithMeans(k=30, min_k=1, sim_options=sim_options)
             knn.fit(data_train)
 

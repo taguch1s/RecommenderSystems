@@ -11,9 +11,15 @@ np.random.seed(0)
 class RFRecommender(BaseRecommender):
     def recommend(self, dataset: Dataset, **kwargs) -> RecommendResult:
         # 評価値をユーザー×映画の行列に変換。欠損値は、平均値または０で穴埋めする
-        user_movie_matrix = dataset.train.pivot(index="user_id", columns="movie_id", values="rating")
-        user_id2index = dict(zip(user_movie_matrix.index, range(len(user_movie_matrix.index))))
-        movie_id2index = dict(zip(user_movie_matrix.columns, range(len(user_movie_matrix.columns))))
+        user_movie_matrix = dataset.train.pivot(
+            index="user_id", columns="movie_id", values="rating"
+        )
+        user_id2index = dict(
+            zip(user_movie_matrix.index, range(len(user_movie_matrix.index)))
+        )
+        movie_id2index = dict(
+            zip(user_movie_matrix.columns, range(len(user_movie_matrix.columns)))
+        )
 
         # 学習に用いる学習用データ中のユーザーと映画の組を取得する
         train_keys = dataset.train[["user_id", "movie_id"]]
@@ -23,7 +29,9 @@ class RFRecommender(BaseRecommender):
         # 評価値を予測したいテスト用データ中のユーザーと映画の組を取得する
         test_keys = dataset.test[["user_id", "movie_id"]]
         # ランキング形式の推薦リスト作成のために学習用データに存在するすべてのユーザーとすべての映画の組み合わせを取得する
-        train_all_keys = user_movie_matrix.stack(dropna=False).reset_index()[["user_id", "movie_id"]]
+        train_all_keys = user_movie_matrix.stack(future_stack=True).reset_index()[
+            ["user_id", "movie_id"]
+        ]
 
         # 特徴量を作成する
         train_x = train_keys.copy()
@@ -33,8 +41,12 @@ class RFRecommender(BaseRecommender):
         # 学習用データに存在するユーザーごとの評価値の最小値、最大値、平均値
         # 及び、映画ごとの評価値の最小値、最大値、平均値を特徴量として追加
         aggregators = ["min", "max", "mean"]
-        user_features = dataset.train.groupby("user_id").rating.agg(aggregators).to_dict()
-        movie_features = dataset.train.groupby("movie_id").rating.agg(aggregators).to_dict()
+        user_features = (
+            dataset.train.groupby("user_id").rating.agg(aggregators).to_dict()
+        )
+        movie_features = (
+            dataset.train.groupby("movie_id").rating.agg(aggregators).to_dict()
+        )
         for agg in aggregators:
             train_x[f"u_{agg}"] = train_x["user_id"].map(user_features[agg])
             test_x[f"u_{agg}"] = test_x["user_id"].map(user_features[agg])
@@ -50,7 +62,9 @@ class RFRecommender(BaseRecommender):
         movie_genres = dataset.item_content[["movie_id", "genre"]]
         genres = set(list(itertools.chain(*movie_genres.genre)))
         for genre in genres:
-            movie_genres[f"is_{genre}"] = movie_genres.genre.apply(lambda x: genre in x)
+            movie_genres.loc[f"is_{genre}"] = movie_genres.genre.apply(
+                lambda x: genre in x
+            )
         movie_genres.drop("genre", axis=1, inplace=True)
         train_x = train_x.merge(movie_genres, on="movie_id")
         test_x = test_x.merge(movie_genres, on="movie_id")
@@ -76,12 +90,18 @@ class RFRecommender(BaseRecommender):
 
         pred_train_all = train_all_keys.copy()
         pred_train_all["rating_pred"] = train_all_pred
-        pred_matrix = pred_train_all.pivot(index="user_id", columns="movie_id", values="rating_pred")
+        pred_matrix = pred_train_all.pivot(
+            index="user_id", columns="movie_id", values="rating_pred"
+        )
 
         # ユーザーが学習用データ内で評価していない映画の中から
         # 予測評価値が高い順に10件の映画をランキング形式の推薦リストとする
         pred_user2items = defaultdict(list)
-        user_evaluated_movies = dataset.train.groupby("user_id").agg({"movie_id": list})["movie_id"].to_dict()
+        user_evaluated_movies = (
+            dataset.train.groupby("user_id")
+            .agg({"movie_id": list})["movie_id"]
+            .to_dict()
+        )
         for user_id in dataset.train.user_id.unique():
             movie_indexes = np.argsort(-pred_matrix.loc[user_id, :]).values
             for movie_index in movie_indexes:

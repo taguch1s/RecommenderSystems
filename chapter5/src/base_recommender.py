@@ -11,7 +11,9 @@ class BaseRecommender(ABC):
 
     def run_sample(self) -> None:
         # Movielensのデータを取得
-        movielens = DataLoader(num_users=1000, num_test_items=5, data_path="../data/ml-10M100K/").load()
+        movielens = DataLoader(
+            num_users=1000, num_test_items=5, data_path="../data/ml-10M100K/"
+        ).load()
         # 推薦計算
         recommend_result = self.recommend(movielens)
         # 推薦結果の評価
