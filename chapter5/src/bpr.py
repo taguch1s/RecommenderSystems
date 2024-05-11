@@ -22,7 +22,9 @@ class BPRRecommender(BaseRecommender):
             lambda x: len(x["movie_id"]) >= minimum_num_rating
         )
 
-        movielens_train_high_rating = filtered_movielens_train[dataset.train.rating >= 4]
+        movielens_train_high_rating = filtered_movielens_train[
+            dataset.train.rating >= 4
+        ]
 
         unique_user_ids = sorted(movielens_train_high_rating.user_id.unique())
         unique_movie_ids = sorted(movielens_train_high_rating.movie_id.unique())
@@ -36,7 +38,9 @@ class BPRRecommender(BaseRecommender):
             movielens_matrix[movie_index, user_index] = 1.0
 
         # initialize a model
-        model = implicit.bpr.BayesianPersonalizedRanking(factors=factors, iterations=n_epochs)
+        model = implicit.bpr.BayesianPersonalizedRanking(
+            factors=factors, iterations=n_epochs
+        )
 
         # 学習
         model.fit(movielens_matrix)
