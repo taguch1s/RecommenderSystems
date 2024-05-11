@@ -16,14 +16,13 @@ RUN curl -sSL https://install.python-poetry.org | python3 - && \
 # シンボリックによるpathへのpoetryコマンドの追加
     cd /usr/local/bin && \
     ln -s /opt/poetry/bin/poetry && \
-# 仮想環境を作成しない設定(コンテナ前提のため，仮想環境を作らない)
     poetry config virtualenvs.create false
 
 # poetryの定義ファイルをコピー (./app/配下に存在すると想定)
-COPY ./pyproject.toml* ./poetry.lock* ./
+COPY pyproject.toml poetry.lock ./
 
 # poetryでライブラリをインストール (pyproject.tomlが既にある場合)
-RUN if [ -f pyproject.toml ]; then poetry install; else poetry new ${project_name} --name ${src_dir}; fi
+RUN poetry install
 
 # scikit-surprise
 RUN poetry run python -m pip install --no-use-pep517 scikit-surprise
